@@ -1,0 +1,96 @@
+-- Step 1: Calculate core account metrics
+WITH account_metrics AS (
+  SELECT
+    s.date AS date,                  
+    sp.country AS country,    
+    a.send_interval AS send_interval,
+    a.is_verified AS is_verified,
+    a.is_unsubscribed AS is_unsubscribed,
+    a.id AS account_id,
+    COUNT(a.id) AS account_cnt,                    
+    -- Pad messaging metrics with zeros to align the schema layout for the upcoming UNION ALL
+    0 AS sent_msg,
+    0 AS open_msg,
+    0 AS visit_msg
+  FROM `data-analytics-mate.DA.account` a
+  JOIN `data-analytics-mate.DA.account_session` acs
+    ON a.id = acs.account_id
+  JOIN `data-analytics-mate.DA.session` s
+    ON acs.ga_session_id = s.ga_session_id
+  JOIN `data-analytics-mate.DA.session_params` sp
+    ON s.ga_session_id = sp.ga_session_id
+  GROUP BY s.date, sp.country, a.send_interval, a.is_verified, a.is_unsubscribed, a.id
+),
+
+-- Step 2: Calculate core email metrics
+email_metrics AS (
+  SELECT
+    -- Normalize email event timestamps by adding the date offset to the session baseline
+    DATE_ADD(s.date, INTERVAL es.sent_date DAY) AS date,
+    sp.country AS country,
+    a.send_interval AS send_interval,
+    a.is_verified AS is_verified,
+    a.is_unsubscribed AS is_unsubscribed,
+    es.id_account AS account_id,
+    -- Pad account count with zero to maintain schema alignment during the union stage
+    0 AS account_cnt,
+    COUNT(DISTINCT es.id_message) AS sent_msg,                        
+    COUNT(DISTINCT eo.id_message) AS open_msg,
+    COUNT(DISTINCT ev.id_message) AS visit_msg  
+  FROM `data-analytics-mate.DA.email_sent` es
+  LEFT JOIN `data-analytics-mate.DA.email_open` eo
+    ON es.id_message = eo.id_message
+  LEFT JOIN `data-analytics-mate.DA.email_visit` ev
+    ON es.id_message = ev.id_message
+  JOIN `data-analytics-mate.DA.account` a
+    ON es.id_account = a.id
+  JOIN `data-analytics-mate.DA.account_session` acs
+    ON a.id = acs.account_id
+  JOIN `data-analytics-mate.DA.session` s
+    ON acs.ga_session_id = s.ga_session_id
+  JOIN `data-analytics-mate.DA.session_params` sp
+    ON s.ga_session_id = sp.ga_session_id
+  GROUP BY s.date, es.sent_date, sp.country, a.send_interval, a.is_verified, a.is_unsubscribed, es.id_account
+),
+
+-- Step 3: Combine the previous two steps into one table using UNION
+account_email_metrics AS (
+  SELECT
+    date,
+    country,
+    send_interval,
+    is_verified,
+    is_unsubscribed,
+    SUM(account_cnt) AS account_cnt,
+    SUM(sent_msg) AS sent_msg,
+    SUM(open_msg) AS open_msg,
+    SUM(visit_msg) AS visit_msg
+  FROM (
+    SELECT * FROM account_metrics
+      UNION ALL
+    SELECT * FROM email_metrics
+  )
+  GROUP BY date, country, send_interval, is_verified, is_unsubscribed
+),
+
+-- Step 4: Calculate totals by country
+total_data AS (
+  SELECT *,
+    SUM(account_cnt) OVER(PARTITION BY country) AS total_acc_country,
+    SUM(sent_msg) OVER(PARTITION BY country) AS total_sent_country
+  FROM account_email_metrics
+),
+
+-- Step 5: Calculate rankings
+ranked_data AS (
+  SELECT *,
+    DENSE_RANK() OVER(ORDER BY total_acc_country DESC) AS rank_acc,
+    DENSE_RANK() OVER(ORDER BY total_sent_country DESC) AS rank_sent
+  FROM total_data
+)
+
+-- Step 6: Output all data (Top 10)
+SELECT *
+FROM ranked_data
+WHERE rank_acc <= 10 OR rank_sent <= 10
+ORDER BY rank_acc, rank_sent;
