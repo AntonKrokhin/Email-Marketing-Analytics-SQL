@@ -13,16 +13,16 @@ Engineered an optimized data pipeline in Google BigQuery that unifies disparate 
 * **is_unsubscribed** — User subscription state (True/False).
 
 ### List of key metrics
-* **account_cnt** — Total volume of newly registered accounts.
-* **sent_msg** — Number of outbound messages dispatched.
-* **open_msg** — Number of messages opened by users.
-* **visit_msg** — Number of click-throughs (website visits) generated from emails.
+* **account_cnt** — Number of accounts created.
+* **sent_msg** — Number of messages sent.
+* **open_msg** — Number of messages opened.
+* **visit_msg** — Number of clicks on messages.
 
 ### List of additional metrics
-* **total_country_account_cnt** — Cumulative subscriber base per country.
-* **total_country_sent_cnt** — Cumulative message volume per country.
-* **rank_total_country_account_cnt** — Country ranking based on user acquisition scale.
-* **rank_total_country_sent_cnt** — Country ranking based on communication density.
+* **total_country_account_cnt** — Total number of subscribers created in the country as a whole.
+* **total_country_sent_cnt** — Total number of letters sent in the country as a whole.
+* **rank_total_country_account_cnt** — Ranking of countries by the number of subscribers created in the country as a whole.
+* **rank_total_country_sent_cnt** — Ranking of countries by the number of letters sent in the country as a whole.
 
 ## Result of code execution
 ![Dashboard Preview](bigquery_results.png)
