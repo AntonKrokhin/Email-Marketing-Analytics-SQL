@@ -24,4 +24,10 @@ Engineered an optimized data pipeline in Google BigQuery that unifies disparate 
 * **rank_total_country_account_cnt** — Country ranking based on user acquisition scale.
 * **rank_total_country_sent_cnt** — Country ranking based on communication density.
 
-### Result of code execution
+## Result of code execution
+![Dashboard Preview](bigquery_results.png)
+
+## Visualizing results in Looker Studio
+![Dashboard Preview](dashboard_preview.png)
+**[Click here to view the Dashboard](https://datastudio.google.com/u/0/reporting/c0fa8994-19e1-48cb-ae60-0241d92f4283/page/tEnnC)**
+
